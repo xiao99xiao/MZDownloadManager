@@ -8,32 +8,53 @@
 
 import UIKit
 
-let kMZDownloadKeyURL        : NSString = "URL"
-let kMZDownloadKeyStartTime  : NSString = "startTime"
-let kMZDownloadKeyFileName   : NSString = "fileName"
-let kMZDownloadKeyProgress   : NSString = "progress"
-let kMZDownloadKeyTask       : NSString = "downloadTask"
-let kMZDownloadKeyStatus     : NSString = "requestStatus"
-let kMZDownloadKeyDetails    : NSString = "downloadDetails"
-let kMZDownloadKeyResumeData : NSString = "resumedata"
+let kMZDownloadKeyURL        : String = "URL"
+let kMZDownloadKeyStartTime  : String = "startTime"
+let kMZDownloadKeyFileName   : String = "fileName"
+let kMZDownloadKeyProgress   : String = "progress"
+let kMZDownloadKeyTask       : String = "downloadTask"
+let kMZDownloadKeyStatus     : String = "requestStatus"
+let kMZDownloadKeyDetails    : String = "downloadDetails"
+let kMZDownloadKeyResumeData : String = "resumedata"
 
-let RequestStatusDownloading : NSString = "RequestStatusDownloading"
-let RequestStatusPaused      : NSString = "RequestStatusPaused"
-let RequestStatusFailed      : NSString = "RequestStatusFailed"
+private let sessionIdentifer: String = "com.iosDevelopment.MZDownloadManager.BackgroundSession"
+
+enum RequestStatus: Int {
+    case Unknown, GettingInfo, Downloading, Paused, Failed
+    
+    func description() -> String {
+        switch self {
+            case .GettingInfo:
+                return "GettingInfo"
+            case .Downloading:
+                return "Downloading"
+            case .Paused:
+                return "Paused"
+            case .Failed:
+                return "Failed"
+            default:
+                return "Unknown"
+        }
+    }
+}
+
+let alertControllerViewTag: Int = 500
 
 @objc protocol MZDownloadDelegate {
     /**A delegate method called each time whenever new download task is start downloading
     */
-    optional func downloadRequestStarted(downloadTask: NSURLSessionDownloadTask);
+    optional func downloadRequestStarted(downloadTask: NSURLSessionDownloadTask)
     /**A delegate method called each time whenever any download task is cancelled by the user
     */
-    optional func downloadRequestCanceled(downloadTask: NSURLSessionDownloadTask);
+    optional func downloadRequestCanceled(downloadTask: NSURLSessionDownloadTask)
     /**A delegate method called each time whenever any download task is finished successfully
     */
-    optional func downloadRequestFinished(fileName: NSString);
+    optional func downloadRequestFinished(fileName: NSString)
+    
+    optional func downloadRequestDidFailedWithError(error: NSError, downloadTask: NSURLSessionDownloadTask)
 }
 
-class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, NSURLSessionDelegate {
+class MZDownloadManagerViewController: UIViewController {
     
     @IBOutlet var bgDownloadTableView : UITableView?
     
@@ -43,49 +64,13 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
     var selectedIndexPath : NSIndexPath!
     
     var delegate          : MZDownloadDelegate?
-    
-    var actionSheetRetry  : UIActionSheet!
-    var actionSheetPause  : UIActionSheet!
-    var actionSheetStart  : UIActionSheet!
-    
-    var isViewLoaded      : Bool!
+
+    var isViewLoaded      : Bool! = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Do any additional setup after loading the view.
-        
-        actionSheetRetry = UIActionSheet()
-        actionSheetRetry.title = "options"
-        actionSheetRetry.addButtonWithTitle("Retry")
-        actionSheetRetry.addButtonWithTitle("Delete")
-        actionSheetRetry.addButtonWithTitle("Cancel")
-        actionSheetRetry.cancelButtonIndex = 2
-        actionSheetRetry.delegate = self
-        
-        actionSheetPause = UIActionSheet()
-        actionSheetPause.title = "options"
-        actionSheetPause.addButtonWithTitle("Pause")
-        actionSheetPause.addButtonWithTitle("Delete")
-        actionSheetPause.addButtonWithTitle("Cancel")
-        actionSheetPause.cancelButtonIndex = 2
-        actionSheetPause.delegate = self
-        
-        actionSheetStart = UIActionSheet()
-        actionSheetStart.title = "options"
-        actionSheetStart.addButtonWithTitle("Start")
-        actionSheetStart.addButtonWithTitle("Delete")
-        actionSheetStart.addButtonWithTitle("Cancel")
-        actionSheetStart.cancelButtonIndex = 2
-        actionSheetStart.delegate = self
-        
         self.isViewLoaded = true
-        
-        /* I don't know why this is not working.Problem = UIActionSheet is always nil
-        actionSheetRetry? = UIActionSheet(title: "Options", delegate: self, cancelButtonTitle: "Cancel", destructiveButtonTitle: nil, otherButtonTitles: "Retry", "Delete")
-        actionSheetPause? = UIActionSheet(title: "Options", delegate: self, cancelButtonTitle: "Cancel", destructiveButtonTitle: nil, otherButtonTitles: "Pause", "Delete")
-        actionSheetStart? = UIActionSheet(title: "Options", delegate: self, cancelButtonTitle: "Cancel", destructiveButtonTitle: nil, otherButtonTitles: "Start", "Delete")
-        */
     }
 
     override func didReceiveMemoryWarning() {
@@ -102,16 +87,9 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
         }
         
         dispatch_once(&sessionStruct.onceToken, { () -> Void in
-            let sessionIdentifer     : String = "com.iosDevelopment.MZDownloadManager.BackgroundSession"
             let sessionConfiguration : NSURLSessionConfiguration
             
-            if #available(iOS 8.0, *) {
-                sessionConfiguration = NSURLSessionConfiguration.backgroundSessionConfigurationWithIdentifier(sessionIdentifer)
-            } else {
-                // Fallback on earlier versions
-                sessionConfiguration = NSURLSessionConfiguration.backgroundSessionConfiguration(sessionIdentifer)
-            }
-
+            sessionConfiguration = NSURLSessionConfiguration.backgroundSessionConfigurationWithIdentifier(sessionIdentifer)
             sessionStruct.session = NSURLSession(configuration: sessionConfiguration, delegate: self, delegateQueue: nil)
         })
         return sessionStruct.session!
@@ -179,7 +157,7 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
         downloadTask.taskDescription = jsonString as String
         
         downloadInfo.setObject(NSDate(), forKey: kMZDownloadKeyStartTime)
-        downloadInfo.setObject(RequestStatusDownloading, forKey: kMZDownloadKeyStatus)
+        downloadInfo.setObject(RequestStatus.Downloading.description(), forKey: kMZDownloadKeyStatus)
         downloadInfo.setObject(downloadTask, forKey: kMZDownloadKeyTask)
         
         let indexPath    : NSIndexPath = NSIndexPath(forRow: self.downloadingArray.count, inSection: 0)
@@ -213,13 +191,13 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
             let taskState       : NSURLSessionTaskState = downloadTask.state
             
             if taskState == NSURLSessionTaskState.Running {
-                downloadInfo?.setObject(RequestStatusDownloading, forKey: kMZDownloadKeyStatus)
+                downloadInfo?.setObject(RequestStatus.Downloading.description(), forKey: kMZDownloadKeyStatus)
                 self.downloadingArray.addObject(downloadInfo!)
             } else if(taskState == NSURLSessionTaskState.Suspended) {
-                downloadInfo?.setObject(RequestStatusPaused, forKey: kMZDownloadKeyStatus)
+                downloadInfo?.setObject(RequestStatus.Paused.description(), forKey: kMZDownloadKeyStatus)
                 self.downloadingArray.addObject(downloadInfo!)
             } else {
-                downloadInfo?.setObject(RequestStatusFailed, forKey: kMZDownloadKeyStatus)
+                downloadInfo?.setObject(RequestStatus.Failed.description(), forKey: kMZDownloadKeyStatus)
             }
 
             if let _ = downloadInfo {
@@ -230,7 +208,7 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
             
         }
     }
-    
+
     func presentNotificationForDownload(fileName : NSString) {
         let application = UIApplication.sharedApplication()
         let applicationState = application.applicationState
@@ -240,90 +218,206 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
             localNotification.alertBody = "Downloading complete of \(fileName)"
             localNotification.alertAction = "Background Transfer Download!"
             localNotification.soundName = UILocalNotificationDefaultSoundName
-            localNotification.applicationIconBadgeNumber = ++application.applicationIconBadgeNumber
+            localNotification.applicationIconBadgeNumber += 1
             application.presentLocalNotificationNow(localNotification)
         }
     }
     
     func isValidResumeData(resumeData: NSData?) -> Bool {
-        if resumeData == nil {
-            return false
-        }
-        if resumeData?.length < 0 {
-            return false
-        }
         
-        var resumeDictionary : AnyObject!
+        guard resumeData != nil || resumeData?.length > 0 else {
+            return false
+        }
+
         do {
+            var resumeDictionary : AnyObject!
             resumeDictionary = try NSPropertyListSerialization.propertyListWithData(resumeData!, options: .Immutable, format: nil)
+            var localFilePath : NSString? = resumeDictionary?.objectForKey("NSURLSessionResumeInfoLocalPath") as? NSString
+            
+            if localFilePath == nil || localFilePath?.length < 1 {
+               localFilePath = NSTemporaryDirectory() + (resumeDictionary["NSURLSessionResumeInfoTempFileName"] as! String)
+            }
+            
+            let fileManager : NSFileManager! = NSFileManager.defaultManager()
+            debugPrint("resume data file exists: \(fileManager.fileExistsAtPath(localFilePath! as String))")
+            return fileManager.fileExistsAtPath(localFilePath! as String)
         } catch let error as NSError {
-            print("resume data is nil: \(error)")
-            resumeDictionary = nil
-        }
-        
-        let localFilePath : NSString? = resumeDictionary?.objectForKey("NSURLSessionResumeInfoLocalPath") as? NSString
-        if localFilePath == nil {
+            debugPrint("resume data is nil: \(error)")
             return false
         }
+    }
+}
+
+// MARK: UITableViewDatasource Handler Extension
+
+extension MZDownloadManagerViewController: UITableViewDataSource {
+    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.downloadingArray.count
+    }
+    
+    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         
-        if localFilePath?.length < 1 {
-            return false
+        let cellIdentifier : NSString = "MZDownloadingCell"
+        let cell : MZDownloadingCell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier as String, forIndexPath: indexPath) as! MZDownloadingCell
+        
+        let downloadInfo = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
+        cell.updateCellForRowAtIndexPath(indexPath, downloadInfoDict: downloadInfo)
+        
+        return cell
+        
+    }
+}
+
+extension MZDownloadManagerViewController: UITableViewDelegate {
+    
+    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        selectedIndexPath = indexPath
+        let downloadInfoDict : NSMutableDictionary = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
+        let downloadStatus = downloadInfoDict.objectForKey(kMZDownloadKeyStatus) as! String
+        
+        self.showAppropriateActionController(downloadStatus)
+        
+        tableView.deselectRowAtIndexPath(indexPath, animated: true)
+    }
+    
+}
+
+// MARK: UIAlertController Handler Extension
+
+extension MZDownloadManagerViewController {
+    
+    func showAppropriateActionController(requestStatus: String) {
+        
+        if requestStatus == RequestStatus.Downloading.description() {
+            self.showAlertControllerForPause()
+        } else if requestStatus == RequestStatus.Failed.description() {
+            self.showAlertControllerForRetry()
+        } else if requestStatus == RequestStatus.Paused.description() {
+            self.showAlertControllerForStart()
         }
-        
-        let fileManager : NSFileManager! = NSFileManager.defaultManager()
-        return fileManager.fileExistsAtPath(localFilePath! as String)
-    }
-
-    // MARK: - My IBActions -
-    
-    @IBAction func cancelButtonTappedOnActionSheet() {
-        let indexPath    : NSIndexPath = selectedIndexPath
-        let downloadInfo : NSMutableDictionary = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
-        let downloadTask : NSURLSessionDownloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
-
-        downloadTask.cancel()
-        
-        self.downloadingArray.removeObjectAtIndex(indexPath.row)
-        self.bgDownloadTableView?.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Left)
-        
-        self.delegate?.downloadRequestCanceled?(downloadTask)
     }
     
-    @IBAction func pauseOrRetryButtonTappedOnActionSheet() {
-        let indexPath         : NSIndexPath = selectedIndexPath
-        let downloadInfo      : NSMutableDictionary = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
-        let downloadTask      : NSURLSessionDownloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
-        let cell              : MZDownloadingCell = self.bgDownloadTableView?.cellForRowAtIndexPath(indexPath) as! MZDownloadingCell
-        let downloadingStatus : NSString = downloadInfo.objectForKey(kMZDownloadKeyStatus) as! NSString
+    func showAlertControllerForPause() {
         
-        if downloadingStatus == RequestStatusDownloading {
+        let pauseAction = UIAlertAction(title: "Pause", style: .Default) { (alertAction: UIAlertAction) in
+            
+            let downloadInfo = self.downloadingArray.objectAtIndex(self.selectedIndexPath.row) as! NSMutableDictionary
+            let downloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
+            let cell = self.bgDownloadTableView?.cellForRowAtIndexPath(self.selectedIndexPath) as! MZDownloadingCell
+            
             downloadTask.suspend()
-            downloadInfo.setObject(RequestStatusPaused, forKey: kMZDownloadKeyStatus)
+            downloadInfo.setObject(RequestStatus.Paused.description(), forKey: kMZDownloadKeyStatus)
             downloadInfo.setObject(NSDate(), forKey: kMZDownloadKeyStartTime)
             
-            self.downloadingArray.replaceObjectAtIndex(indexPath.row, withObject: downloadInfo)
+            self.downloadingArray.replaceObjectAtIndex(self.selectedIndexPath.row, withObject: downloadInfo)
+            cell.updateCellForRowAtIndexPath(self.selectedIndexPath, downloadInfoDict: downloadInfo)
+        }
+        
+        let removeAction = UIAlertAction(title: "Remove", style: .Destructive) { (alertAction: UIAlertAction) in
+            self.removeRequest()
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .Cancel, handler: nil)
+        
+        let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .ActionSheet)
+        alertController.view.tag = alertControllerViewTag
+        alertController.addAction(pauseAction)
+        alertController.addAction(removeAction)
+        alertController.addAction(cancelAction)
+        self.presentViewController(alertController, animated: true, completion: nil)
+    }
+    
+    func showAlertControllerForRetry() {
+        
+        let retryAction = UIAlertAction(title: "Retry", style: .Default) { (alertAction: UIAlertAction) in
             
-        } else if downloadingStatus == RequestStatusPaused {
+            let downloadInfo = self.downloadingArray.objectAtIndex(self.selectedIndexPath.row) as! NSMutableDictionary
+            let downloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
+            let cell = self.bgDownloadTableView?.cellForRowAtIndexPath(self.selectedIndexPath) as! MZDownloadingCell
+            
             downloadTask.resume()
-            downloadInfo.setObject(RequestStatusDownloading, forKey: kMZDownloadKeyStatus)
-            
-            self.downloadingArray.replaceObjectAtIndex(indexPath.row, withObject: downloadInfo)
-            
-        } else {
-            downloadTask.resume()
-            downloadInfo.setObject(RequestStatusDownloading, forKey: kMZDownloadKeyStatus)
+            downloadInfo.setObject(RequestStatus.Downloading.description(), forKey: kMZDownloadKeyStatus)
             downloadInfo.setObject(NSDate(), forKey: kMZDownloadKeyStartTime)
             downloadInfo.setObject(downloadTask, forKey: kMZDownloadKeyTask)
             
-            self.downloadingArray.replaceObjectAtIndex(indexPath.row, withObject: downloadInfo)
+            self.downloadingArray.replaceObjectAtIndex(self.selectedIndexPath.row, withObject: downloadInfo)
+            cell.updateCellForRowAtIndexPath(self.selectedIndexPath, downloadInfoDict: downloadInfo)
         }
-        self.updateCellForRowAtIndexPath(cell, indexPath: indexPath)
+        
+        let removeAction = UIAlertAction(title: "Remove", style: .Destructive) { (alertAction: UIAlertAction) in
+            self.removeRequest()
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .Cancel, handler: nil)
+        
+        let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .ActionSheet)
+        alertController.view.tag = alertControllerViewTag
+        alertController.addAction(retryAction)
+        alertController.addAction(removeAction)
+        alertController.addAction(cancelAction)
+        self.presentViewController(alertController, animated: true, completion: nil)
     }
     
-    // MARK: - NSURLSession Delegates -
+    func showAlertControllerForStart() {
+        
+        let startAction = UIAlertAction(title: "Start", style: .Default) { (alertAction: UIAlertAction) in
+            
+            let downloadInfo = self.downloadingArray.objectAtIndex(self.selectedIndexPath.row) as! NSMutableDictionary
+            let downloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
+            let cell = self.bgDownloadTableView?.cellForRowAtIndexPath(self.selectedIndexPath) as! MZDownloadingCell
+            
+            downloadTask.resume()
+            downloadInfo.setObject(RequestStatus.Downloading.description(), forKey: kMZDownloadKeyStatus)
+            
+            self.downloadingArray.replaceObjectAtIndex(self.selectedIndexPath.row, withObject: downloadInfo)
+            cell.updateCellForRowAtIndexPath(self.selectedIndexPath, downloadInfoDict: downloadInfo)
+        }
+        
+        let removeAction = UIAlertAction(title: "Remove", style: .Destructive) { (alertAction: UIAlertAction) in
+            self.removeRequest()
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .Cancel, handler: nil)
+        
+        let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .ActionSheet)
+        alertController.view.tag = alertControllerViewTag
+        alertController.addAction(startAction)
+        alertController.addAction(removeAction)
+        alertController.addAction(cancelAction)
+        self.presentViewController(alertController, animated: true, completion: nil)
+    }
+    
+    /***** Common function for removing download task from array *****/
+    func removeRequest() {
+        
+        let downloadInfo = self.downloadingArray.objectAtIndex(self.selectedIndexPath.row) as! NSMutableDictionary
+        let downloadTask = downloadInfo.objectForKey(kMZDownloadKeyTask) as! NSURLSessionDownloadTask
+        
+        downloadTask.cancel()
+        
+        self.downloadingArray.removeObjectAtIndex(self.selectedIndexPath.row)
+        self.bgDownloadTableView?.deleteRowsAtIndexPaths([self.selectedIndexPath], withRowAnimation: UITableViewRowAnimation.Left)
+    }
+    
+    func safelyDismissAlertController() {
+        /***** Dismiss alert controller if and only if it exists and it belongs to MZDownloadManager *****/
+        /***** E.g App will eventually crash if download is completed and user tap remove *****/
+        /***** As it was already removed from the array *****/
+        if isViewLoaded == true {
+            if let controller = self.presentedViewController {
+                guard controller is UIAlertController && controller.view.tag == alertControllerViewTag else {
+                    return
+                }
+                controller.dismissViewControllerAnimated(true, completion: nil)
+            }
+        }
+    }
+}
+
+extension MZDownloadManagerViewController: NSURLSessionDelegate {
     
     func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        for downloadDict in self.downloadingArray {
+        for (indexOfObject, downloadDict) in self.downloadingArray.enumerate() {
             if downloadTask.isEqual(downloadDict.objectForKey(kMZDownloadKeyTask)) {
                 dispatch_async(dispatch_get_main_queue(), { () -> Void in
                     
@@ -337,7 +431,6 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
                     
                     let speed                   : Float = Float(totalBytesWritten) / Float(downloadTime)
                     
-                    let indexOfObject           : NSInteger = self.downloadingArray.indexOfObject(downloadDict)
                     let indexPath               : NSIndexPath = NSIndexPath(forRow: indexOfObject, inSection: 0)
                     
                     let remainingContentLength  : Int64 = totalBytesExpectedToWrite - totalBytesWritten
@@ -357,7 +450,7 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
                     let remainingTimeStr        : NSMutableString = NSMutableString()
                     let detailLabelText         : NSMutableString = NSMutableString()
                     
-                    if self.isViewLoaded != nil {
+                    if self.isViewLoaded == true {
                         if hours > 0 {
                             remainingTimeStr.appendString("\(hours) Hours ")
                         }
@@ -395,13 +488,13 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
                 let fileName        : NSString = downloadDict.objectForKey(kMZDownloadKeyFileName) as! NSString
                 let destinationPath : NSString = fileDest.stringByAppendingPathComponent(fileName as String)
                 let fileURL         : NSURL = NSURL(fileURLWithPath: destinationPath as String)
-                print("directory path = \(destinationPath)")
+                debugPrint("directory path = \(destinationPath)")
                 
                 let fileManager : NSFileManager = NSFileManager.defaultManager()
                 do {
                     try fileManager.moveItemAtURL(location, toURL: fileURL)
                 } catch let error as NSError {
-                    print("Error while moving downloaded file to destination path:\(error)")
+                    debugPrint("Error while moving downloaded file to destination path:\(error)")
                     let errorMessage : NSString = error.localizedDescription as NSString
                     
                     dispatch_async(dispatch_get_main_queue(), { () -> Void in
@@ -415,109 +508,97 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
     }
     
     func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
-        if let error = error {
-            print("Download complete with error: \(error)")
-            let errorUserInfo : NSDictionary? = error.userInfo
-            if let _: AnyObject = errorUserInfo?.objectForKey("NSURLErrorBackgroundTaskCancelledReasonKey") {
-                let errorReasonNum : Int = Int(errorUserInfo?.objectForKey("NSURLErrorBackgroundTaskCancelledReasonKey") as! NSNumber)
-                if errorReasonNum == NSURLErrorCancelledReasonUserForceQuitApplication || errorReasonNum == NSURLErrorCancelledReasonBackgroundUpdatesDisabled {
-                    
-                    
-                    let taskDescStr: String? = task.taskDescription
-                    let taskDescriptionData: NSData = (taskDescStr?.dataUsingEncoding(NSUTF8StringEncoding))!
-                    var taskInfoDict : NSMutableDictionary?
-                    
-                    do {
-                       taskInfoDict = try NSJSONSerialization.JSONObjectWithData(taskDescriptionData, options: .AllowFragments).mutableCopy() as? NSMutableDictionary
-                    } catch let jsonError as NSError {
-                        print("Error while retreiving json value: didCompleteWithError \(jsonError.localizedDescription)")
+        debugPrint("task id: \(task.taskIdentifier)")
+        if error?.userInfo[NSURLErrorBackgroundTaskCancelledReasonKey]?.integerValue == NSURLErrorCancelledReasonUserForceQuitApplication || error?.userInfo[NSURLErrorBackgroundTaskCancelledReasonKey]?.integerValue == NSURLErrorCancelledReasonBackgroundUpdatesDisabled {
+            
+            do {
+                let taskDescriptionData: NSData = (task.taskDescription?.dataUsingEncoding(NSUTF8StringEncoding))!
+                let taskInfoDict = try NSJSONSerialization.JSONObjectWithData(taskDescriptionData, options: .AllowFragments).mutableCopy() as? NSMutableDictionary
+                
+                let fileName        : NSString = taskInfoDict?.objectForKey(kMZDownloadKeyFileName) as! NSString
+                let fileURL         : NSString = taskInfoDict?.objectForKey(kMZDownloadKeyURL) as! NSString
+                let downloadInfo    : NSMutableDictionary = NSMutableDictionary()
+                downloadInfo.setObject(fileName, forKey: kMZDownloadKeyFileName)
+                downloadInfo.setObject(fileURL, forKey: kMZDownloadKeyURL)
+                downloadInfo.setObject(RequestStatus.Failed.description(), forKey: kMZDownloadKeyStatus)
+                
+                let resumeData = error?.userInfo[NSURLSessionDownloadTaskResumeData] as? NSData
+                
+                dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                    var newTask = task
+                    if self.isValidResumeData(resumeData) == true {
+                        newTask = self.sessionManager.downloadTaskWithResumeData(resumeData!)
+                    } else {
+                        newTask = self.sessionManager.downloadTaskWithURL(NSURL(string: fileURL as String)!)
                     }
                     
-                    let fileName        : NSString = taskInfoDict?.objectForKey(kMZDownloadKeyFileName) as! NSString
-                    let fileURL         : NSString = taskInfoDict?.objectForKey(kMZDownloadKeyURL) as! NSString
-                    let downloadInfo    : NSMutableDictionary = NSMutableDictionary()
-                    downloadInfo.setObject(fileName, forKey: kMZDownloadKeyFileName)
-                    downloadInfo.setObject(fileURL, forKey: kMZDownloadKeyURL)
-                    downloadInfo.setObject(RequestStatusFailed, forKey: kMZDownloadKeyStatus)
+                    newTask.taskDescription = task.taskDescription
+                    downloadInfo.setObject(newTask as! NSURLSessionDownloadTask, forKey: kMZDownloadKeyTask)
                     
-                    var newTask = task
-                    let resumeData : NSData? = errorUserInfo?.objectForKey(NSURLSessionDownloadTaskResumeData) as? NSData
-
-                    dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                        
-                        if let resumeData = resumeData {
-                            let hasValidResumeData : Bool = self.isValidResumeData(resumeData)
-                            if hasValidResumeData == true {
-                                newTask = self.sessionManager.downloadTaskWithResumeData(resumeData)
-                            } else {
-                                newTask = self.sessionManager.downloadTaskWithURL(NSURL(string: fileURL as String)!)
-                            }
-                        } else {
-                            newTask = self.sessionManager.downloadTaskWithURL(NSURL(string: fileURL as String)!)
-                        }
-                        
-                        newTask.taskDescription = task.taskDescription
-                        downloadInfo.setObject(newTask as! NSURLSessionDownloadTask, forKey: kMZDownloadKeyTask)
-                        
-                        self.downloadingArray.addObject(downloadInfo)
-                        
-                        self.dismissAllActionSeets()
-                        self.bgDownloadTableView?.reloadData()
-                    })
-                    return
-                }
+                    self.downloadingArray.addObject(downloadInfo)
+                    
+                    self.safelyDismissAlertController()
+                    self.bgDownloadTableView?.reloadData()
+                    
+                })
+                
+            } catch let jsonError as NSError {
+                print("Error while retreiving json value: didCompleteWithError \(jsonError.localizedDescription)")
             }
-        }
-        for downloadInfo in self.downloadingArray {
-            if task.isEqual(downloadInfo.objectForKey(kMZDownloadKeyTask)) {
-                let indexOfObject : Int = self.downloadingArray.indexOfObject(downloadInfo)
-                if let error = error {
-                    let errorUserInfo : NSDictionary? = error.userInfo
-                    if error.code != NSURLErrorCancelled {
-                        let taskInfo    : String? = task.taskDescription
+        } else {
+            for(indexOfObject, downloadInfo) in self.downloadingArray.enumerate() {
+                if task.isEqual(downloadInfo.objectForKey(kMZDownloadKeyTask)) {
+                    if error?.code == NSURLErrorCancelled || error == nil {
+                        dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                            self.safelyDismissAlertController()
+                            let fileName : NSString = downloadInfo.objectForKey(kMZDownloadKeyFileName) as! NSString
+                            
+                            self.presentNotificationForDownload(fileName)
+                            
+                            self.downloadingArray.removeObjectAtIndex(indexOfObject)
+                            let indexPath : NSIndexPath = NSIndexPath(forRow: indexOfObject, inSection: 0)
+                            self.bgDownloadTableView?.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Left)
+                            
+                            if error == nil {
+                                self.delegate?.downloadRequestFinished?(fileName)
+                            } else {
+                                self.delegate?.downloadRequestCanceled?(task as! NSURLSessionDownloadTask)
+                            }
+                            
+                        })
+                    } else {
                         let fileURL     : NSString = downloadInfo.objectForKey(kMZDownloadKeyURL) as! NSString
-                        let resumeData  : NSData? = errorUserInfo?.objectForKey(NSURLSessionDownloadTaskResumeData) as? NSData
-                        var newTask = task
-
+                        let resumeData = error?.userInfo[NSURLSessionDownloadTaskResumeData] as? NSData
+                        
                         dispatch_async(dispatch_get_main_queue(), { () -> Void in
                             
-                            if let resumeData = resumeData {
-                                let hasValidResumeData : Bool = self.isValidResumeData(resumeData)
-                                if hasValidResumeData == true {
-                                    newTask = self.sessionManager.downloadTaskWithResumeData(resumeData)
-                                } else {
-                                    newTask = self.sessionManager.downloadTaskWithURL(NSURL(string: fileURL as String)!)
-                                }
+                            var newTask = task
+                            if self.isValidResumeData(resumeData) == true {
+                                newTask = self.sessionManager.downloadTaskWithResumeData(resumeData!)
                             } else {
                                 newTask = self.sessionManager.downloadTaskWithURL(NSURL(string: fileURL as String)!)
                             }
                             
-                            newTask.taskDescription = taskInfo
-                            downloadInfo.setObject(RequestStatusFailed, forKey: kMZDownloadKeyStatus)
+                            newTask.taskDescription = task.taskDescription
+                            downloadInfo.setObject(RequestStatus.Failed.description(), forKey: kMZDownloadKeyStatus)
                             downloadInfo.setObject(newTask as! NSURLSessionDownloadTask, forKey: kMZDownloadKeyTask)
                             
                             self.downloadingArray.replaceObjectAtIndex(indexOfObject, withObject: downloadInfo)
                             
-                            self.dismissAllActionSeets()
+                            self.safelyDismissAlertController()
                             self.bgDownloadTableView?.reloadData()
-                            MZUtility.showAlertViewWithTitle(kAlertTitle, msg: error.localizedDescription)
+                            
+                            if let error = error {
+                                self.delegate?.downloadRequestDidFailedWithError?(error, downloadTask: task as! NSURLSessionDownloadTask)
+                            } else {
+                                let error: NSError = NSError(domain: "MZDownloadManagerDomain", code: 1000, userInfo: [NSLocalizedDescriptionKey : "Unknown error occurred"])
+                                self.delegate?.downloadRequestDidFailedWithError?(error, downloadTask: task as! NSURLSessionDownloadTask)
+                            }
+                            
                         })
                     }
-                } else {
-                    dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                        self.dismissAllActionSeets()
-                        let fileName : NSString = downloadInfo.objectForKey(kMZDownloadKeyFileName) as! NSString
-                        
-                        self.presentNotificationForDownload(fileName)
-                        
-                        self.downloadingArray.removeObjectAtIndex(indexOfObject)
-                        let indexPath : NSIndexPath = NSIndexPath(forRow: indexOfObject, inSection: 0)
-                        self.bgDownloadTableView?.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Left)
-                        
-                        self.delegate?.downloadRequestFinished?(fileName)
-                    })
+                    break;
                 }
-                break
             }
         }
     }
@@ -532,78 +613,5 @@ class MZDownloadManagerViewController: UIViewController, UIActionSheetDelegate, 
         }
         
         print("All tasks are finished")
-    }
-    /*
-    // MARK: - Navigation -
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue!, sender: AnyObject!) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-    
-    //MARK: - UIActionSheet Delegates -
-    
-    func actionSheet(actionSheet: UIActionSheet, didDismissWithButtonIndex buttonIndex: Int) {
-        if buttonIndex == 0 {
-            self.pauseOrRetryButtonTappedOnActionSheet()
-        } else if buttonIndex == 1 {
-            self.cancelButtonTappedOnActionSheet()
-        }
-    }
-    
-    func dismissAllActionSeets() {
-        if isViewLoaded != nil {
-            actionSheetPause.dismissWithClickedButtonIndex(2, animated: true)
-            actionSheetRetry.dismissWithClickedButtonIndex(2, animated: true)
-            actionSheetStart.dismissWithClickedButtonIndex(2, animated: true)
-        }
-    }
-    
-    // MARK: - UITableView Delegates and Datasource -
-    
-    func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.downloadingArray.count
-    }
-    
-    func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        
-        let cellIdentifier : NSString = "MZDownloadingCell"
-        let cell : MZDownloadingCell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier as String, forIndexPath: indexPath) as! MZDownloadingCell
-        
-        self.updateCellForRowAtIndexPath(cell, indexPath: indexPath)
-        
-        return cell
-        
-    }
-    
-    func updateCellForRowAtIndexPath(cell : MZDownloadingCell, indexPath : NSIndexPath) {
-        let downloadInfoDict : NSMutableDictionary = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
-        let fileName         : NSString = downloadInfoDict.objectForKey(kMZDownloadKeyFileName) as! NSString
-        
-        cell.lblTitle?.text = "File Title: \(fileName)"
-        
-        if let _ = downloadInfoDict.objectForKey(kMZDownloadKeyDetails) as? NSString {
-            let progress         : NSString = downloadInfoDict.objectForKey(kMZDownloadKeyProgress) as! NSString
-            cell.lblDetails?.text = downloadInfoDict.objectForKey(kMZDownloadKeyDetails) as! NSString as String
-            cell.progressDownload?.progress = progress.floatValue
-        }
-    }
-    
-    func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
-        selectedIndexPath = indexPath
-        let downloadInfoDict : NSMutableDictionary = self.downloadingArray.objectAtIndex(indexPath.row) as! NSMutableDictionary
-        let downloadStatus : NSString = downloadInfoDict.objectForKey(kMZDownloadKeyStatus) as! NSString
-        
-        if downloadStatus == RequestStatusPaused {
-            actionSheetStart.showFromTabBar((self.tabBarController?.tabBar)!)
-        } else if downloadStatus == RequestStatusDownloading {
-            actionSheetPause.showFromTabBar((self.tabBarController?.tabBar)!)
-        } else {
-            print("retry actionsheet\(actionSheetRetry)")
-            actionSheetRetry.showFromTabBar((self.tabBarController?.tabBar)!)
-        }
-        tableView.deselectRowAtIndexPath(indexPath, animated: true)
     }
 }

@@ -35,7 +35,9 @@ class MZDownloadedViewController: UIViewController {
         
         downloadedFilesArray?.removeObject(".DS_Store")
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "downloadFinishedNotification:", name: DownloadCompletedNotif as String, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: NSSelectorFromString(""), name: DownloadCompletedNotif as String, object: nil)
+        
+//        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(MZDownloadedViewController.downloadFinishedNotification(_:)), name: DownloadCompletedNotif as String, object: nil)
     }
 
     override func didReceiveMemoryWarning() {

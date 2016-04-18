@@ -46,7 +46,7 @@ class MZUtility: NSObject {
             let isFileAlreadyExists : Bool = fileManger.fileExistsAtPath(fileDocDirectoryPath! as String)
             
             if isFileAlreadyExists {
-                fileNumber++
+                fileNumber += 1
                 suggestedFileName = "\(fileName)(\(fileNumber))"
             } else {
                 isUnique = true
