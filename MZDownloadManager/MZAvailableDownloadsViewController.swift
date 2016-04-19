@@ -8,24 +8,22 @@
 
 import UIKit
 
-class MZAvailableDownloadsViewController: UIViewController, MZDownloadDelegate, UITableViewDataSource {
+class MZAvailableDownloadsViewController: UIViewController {
     @IBOutlet var availableDownloadTableView : UITableView?
     
     var mzDownloadingViewObj    : MZDownloadManagerViewController?
-    var availableDownloadsArray : NSMutableArray!
+    var availableDownloadsArray: [String] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        availableDownloadsArray = NSMutableArray(objects:
-            "http://dl.dropbox.com/u/97700329/file1.mp4",
-            "http://dl.dropbox.com/u/97700329/file2.mp4",
-            "http://dl.dropbox.com/u/97700329/file3.mp4",
-            "http://dl.dropbox.com/u/97700329/FileZilla_3.6.0.2_i686-apple-darwin9.app.tar.bz2",
-            "http://dl.dropbox.com/u/97700329/GCDExample-master.zip")
+        availableDownloadsArray.append("http://dl.dropbox.com/u/97700329/file1.mp4")
+        availableDownloadsArray.append("http://dl.dropbox.com/u/97700329/file2.mp4")
+        availableDownloadsArray.append("http://dl.dropbox.com/u/97700329/file3.mp4")
+        availableDownloadsArray.append("http://dl.dropbox.com/u/97700329/FileZilla_3.6.0.2_i686-apple-darwin9.app.tar.bz2")
+        availableDownloadsArray.append("http://dl.dropbox.com/u/97700329/GCDExample-master.zip")
         
         self.setUpDownloadingViewController()
-        // Do any additional setup after loading the view.
     }
 
     override func didReceiveMemoryWarning() {
@@ -41,36 +39,11 @@ class MZAvailableDownloadsViewController: UIViewController, MZDownloadDelegate, 
         mzDownloadingViewObj?.delegate = self
 
         mzDownloadingViewObj?.sessionManager = mzDownloadingViewObj?.backgroundSession()
-        mzDownloadingViewObj?.downloadingArray = NSMutableArray()
         mzDownloadingViewObj?.populateOtherDownloadTasks()
     }
-    /*
-    // MARK: - Navigation
+}
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue!, sender: AnyObject!) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-    
-   // MARK: - MZDownloadManager Delegates -
-    
-    func downloadRequestStarted(downloadTask: NSURLSessionDownloadTask) {
-        
-    }
-    
-    func downloadRequestCanceled(downloadTask: NSURLSessionDownloadTask) {
-        
-    }
-    
-    func downloadRequestFinished(fileName: NSString) {
-        let docDirectoryPath : NSString = fileDest.stringByAppendingPathComponent(fileName as String)
-        NSNotificationCenter.defaultCenter().postNotificationName(DownloadCompletedNotif as String, object: docDirectoryPath)
-    }
-    
-    // MARK: - Tableview Delegate and Datasource -
-
+extension MZAvailableDownloadsViewController: UITableViewDataSource {
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return availableDownloadsArray.count
     }
@@ -80,24 +53,45 @@ class MZAvailableDownloadsViewController: UIViewController, MZDownloadDelegate, 
         let cellIdentifier : NSString = "AvailableDownloadsCell"
         let cell : UITableViewCell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier as String, forIndexPath: indexPath) as UITableViewCell
         
-        let fileURL  : NSString = availableDownloadsArray.objectAtIndex(indexPath.row) as! NSString
+        let fileURL  : NSString = availableDownloadsArray[indexPath.row] as NSString
         let fileName : NSString = fileURL.lastPathComponent
         
         cell.textLabel?.text = fileName as String
         
         return cell
     }
-    
+}
+
+extension MZAvailableDownloadsViewController: UITableViewDelegate {
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
         
-        let fileURL : NSString = availableDownloadsArray.objectAtIndex(indexPath.row) as! NSString
+        let fileURL  : NSString = availableDownloadsArray[indexPath.row] as NSString
         var fileName : NSString = fileURL.lastPathComponent
         fileName = MZUtility.getUniqueFileNameWithPath(fileDest.stringByAppendingPathComponent(fileName as String))
         
         mzDownloadingViewObj?.addDownloadTask(fileName, fileURL: fileURL.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding)!)
         
-        availableDownloadsArray.removeObjectAtIndex(indexPath.row)
+        availableDownloadsArray.removeAtIndex(indexPath.row)
         tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Right)
+    }
+}
+
+extension MZAvailableDownloadsViewController: MZDownloadDelegate {
+    func downloadRequestStarted(downloadTask: NSURLSessionDownloadTask) {
+        
+    }
+    
+    func downloadRequestCanceled(downloadTask: NSURLSessionDownloadTask) {
+        
+    }
+    
+    func downloadRequestDidFailedWithError(error: NSError, downloadTask: NSURLSessionDownloadTask) {
+        debugPrint("Request failed: \(error)")
+    }
+    
+    func downloadRequestFinished(fileName: NSString) {
+        let docDirectoryPath : NSString = fileDest.stringByAppendingPathComponent(fileName as String)
+        NSNotificationCenter.defaultCenter().postNotificationName(DownloadCompletedNotif as String, object: docDirectoryPath)
     }
 }

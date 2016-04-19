@@ -25,15 +25,14 @@ class MZDownloadingCell: UITableViewCell {
         // Configure the view for the selected state
     }
     
-    func updateCellForRowAtIndexPath(indexPath : NSIndexPath, downloadInfoDict: NSMutableDictionary) {
-        let fileName         : NSString = downloadInfoDict.objectForKey(kMZDownloadKeyFileName) as! NSString
+    func updateCellForRowAtIndexPath(indexPath : NSIndexPath, downloadInfoDict: [String : AnyObject]) {
+        let fileName = downloadInfoDict[kMZDownloadKeyFileName] as! String
         
         self.lblTitle?.text = "File Title: \(fileName)"
         
-        if let _ = downloadInfoDict.objectForKey(kMZDownloadKeyDetails) as? NSString {
-            let progress         : NSString = downloadInfoDict.objectForKey(kMZDownloadKeyProgress) as! NSString
-            self.lblDetails?.text = downloadInfoDict.objectForKey(kMZDownloadKeyDetails) as! NSString as String
-            self.progressDownload?.progress = progress.floatValue
+        if let details = downloadInfoDict[kMZDownloadKeyDetails] as? String {
+            self.lblDetails?.text = details
+            self.progressDownload?.progress = Float(downloadInfoDict[kMZDownloadKeyProgress] as! String) ?? 0.0
         }
     }
 }
