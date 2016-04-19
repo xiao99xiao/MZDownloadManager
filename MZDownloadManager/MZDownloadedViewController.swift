@@ -34,9 +34,9 @@ class MZDownloadedViewController: UIViewController {
             print("Error while getting directory content \(error)")
         }
         
-//        NSNotificationCenter.defaultCenter().addObserver(self, selector: NSSelectorFromString("downloadFinishedNotification:"), name: DownloadCompletedNotif as String, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: NSSelectorFromString("downloadFinishedNotification:"), name: DownloadCompletedNotif as String, object: nil)
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(MZDownloadedViewController.downloadFinishedNotification(_:)), name: DownloadCompletedNotif as String, object: nil)
+//        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(MZDownloadedViewController.downloadFinishedNotification(_:)), name: DownloadCompletedNotif as String, object: nil)
     }
 
     override func didReceiveMemoryWarning() {

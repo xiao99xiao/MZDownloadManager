@@ -8,14 +8,43 @@
 
 import UIKit
 
+enum TaskStatus: Int {
+    case Unknown, GettingInfo, Downloading, Paused, Failed
+    
+    func description() -> String {
+        switch self {
+        case .GettingInfo:
+            return "GettingInfo"
+        case .Downloading:
+            return "Downloading"
+        case .Paused:
+            return "Paused"
+        case .Failed:
+            return "Failed"
+        default:
+            return "Unknown"
+        }
+    }
+}
+
 class MZDownloadModel: NSObject {
     
     var fileName: String!
     var fileURL: String!
+    var status: String = TaskStatus.GettingInfo.description()
+    
+    var file: (size: Float, unit: String)?
+    var downloadedFile: (size: Float, unit: String)?
     
     var remainingTime: (hours: Int, minutes: Int, seconds: Int)?
     
+    var speed: (speed: Float, unit: String)?
+    
     var progress: Float = 0
+    
+    var task: NSURLSessionDownloadTask?
+    
+    var startTime: NSDate?
     
     convenience init(fileName: String, fileURL: String) {
         self.init()
@@ -24,14 +53,3 @@ class MZDownloadModel: NSObject {
         self.fileURL = fileURL
     }
 }
-
-/*
-let kMZDownloadKeyURL        : String = "URL"
-let kMZDownloadKeyStartTime  : String = "startTime"
-let kMZDownloadKeyFileName   : String = "fileName"
-let kMZDownloadKeyProgress   : String = "progress"
-let kMZDownloadKeyTask       : String = "downloadTask"
-let kMZDownloadKeyStatus     : String = "requestStatus"
-let kMZDownloadKeyDetails    : String = "downloadDetails"
-let kMZDownloadKeyResumeData : String = "resumedata"
-*/

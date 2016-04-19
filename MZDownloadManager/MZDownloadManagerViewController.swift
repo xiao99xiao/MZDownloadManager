@@ -33,10 +33,13 @@ class MZDownloadManagerViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    func refreshCellForIndex(downloadInfo: [String : AnyObject], index: Int) {
+    func refreshCellForIndex(downloadModel: MZDownloadModel, index: Int) {
         let indexPath = NSIndexPath.init(forRow: index, inSection: 0)
-        let cell = bgDownloadTableView?.cellForRowAtIndexPath(indexPath) as! MZDownloadingCell
-        cell.updateCellForRowAtIndexPath(indexPath, downloadInfoDict: downloadInfo)
+        let cell = bgDownloadTableView?.cellForRowAtIndexPath(indexPath)
+        if let cell = cell {
+            let downloadCell = cell as! MZDownloadingCell
+            downloadCell.updateCellForRowAtIndexPath(indexPath, downloadModel: downloadModel)
+        }
     }
 }
 
@@ -52,8 +55,8 @@ extension MZDownloadManagerViewController: UITableViewDataSource {
         let cellIdentifier : NSString = "MZDownloadingCell"
         let cell : MZDownloadingCell = tableView.dequeueReusableCellWithIdentifier(cellIdentifier as String, forIndexPath: indexPath) as! MZDownloadingCell
         
-        let downloadInfo = downloadManager.downloadingArray[indexPath.row]
-        cell.updateCellForRowAtIndexPath(indexPath, downloadInfoDict: downloadInfo)
+        let downloadModel = downloadManager.downloadingArray[indexPath.row]
+        cell.updateCellForRowAtIndexPath(indexPath, downloadModel: downloadModel)
         
         return cell
         
@@ -65,8 +68,8 @@ extension MZDownloadManagerViewController: UITableViewDelegate {
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         selectedIndexPath = indexPath
         
-        let downloadInfo = downloadManager.downloadingArray[indexPath.row]
-        self.showAppropriateActionController(downloadInfo[kMZDownloadKeyStatus] as! String)
+        let downloadModel = downloadManager.downloadingArray[indexPath.row]
+        self.showAppropriateActionController(downloadModel.status)
         
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
     }
@@ -79,11 +82,11 @@ extension MZDownloadManagerViewController {
     
     func showAppropriateActionController(requestStatus: String) {
         
-        if requestStatus == RequestStatus.Downloading.description() {
+        if requestStatus == TaskStatus.Downloading.description() {
             self.showAlertControllerForPause()
-        } else if requestStatus == RequestStatus.Failed.description() {
+        } else if requestStatus == TaskStatus.Failed.description() {
             self.showAlertControllerForRetry()
-        } else if requestStatus == RequestStatus.Paused.description() {
+        } else if requestStatus == TaskStatus.Paused.description() {
             self.showAlertControllerForStart()
         }
     }
@@ -163,28 +166,28 @@ extension MZDownloadManagerViewController {
 
 extension MZDownloadManagerViewController: MZDownloadManagerDelegate {
     
-    func downloadRequestStarted(downloadInfo: [String : AnyObject], index: Int) {
+    func downloadRequestStarted(downloadModel: MZDownloadModel, index: Int) {
         let indexPath = NSIndexPath.init(forRow: index, inSection: 0)
         bgDownloadTableView?.insertRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Fade)
     }
     
-    func downloadRequestDidPopulatedInterruptedTasks(downloadInfo: [[String : AnyObject]]) {
+    func downloadRequestDidPopulatedInterruptedTasks(downloadModels: [MZDownloadModel]) {
         bgDownloadTableView?.reloadData()
     }
     
-    func downloadRequestDidUpdateProgress(downloadInfo: [String : AnyObject], index: Int) {
-        self.refreshCellForIndex(downloadInfo, index: index)
+    func downloadRequestDidUpdateProgress(downloadModel: MZDownloadModel, index: Int) {
+        self.refreshCellForIndex(downloadModel, index: index)
     }
     
-    func downloadRequestDidPaused(downloadInfo: [String : AnyObject], index: Int) {
-        self.refreshCellForIndex(downloadInfo, index: index)
+    func downloadRequestDidPaused(downloadModel: MZDownloadModel, index: Int) {
+        self.refreshCellForIndex(downloadModel, index: index)
     }
     
-    func downloadRequestDidResumed(downloadInfo: [String : AnyObject], index: Int) {
-        self.refreshCellForIndex(downloadInfo, index: index)
+    func downloadRequestDidResumed(downloadModel: MZDownloadModel, index: Int) {
+        self.refreshCellForIndex(downloadModel, index: index)
     }
     
-    func downloadRequestCanceled(downloadInfo: [String : AnyObject], index: Int) {
+    func downloadRequestCanceled(downloadModel: MZDownloadModel, index: Int) {
         
         self.safelyDismissAlertController()
         
@@ -192,7 +195,7 @@ extension MZDownloadManagerViewController: MZDownloadManagerDelegate {
         self.bgDownloadTableView?.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Left)
     }
     
-    func downloadRequestFinished(downloadInfo: [String : AnyObject], index: Int) {
+    func downloadRequestFinished(downloadModel: MZDownloadModel, index: Int) {
         
         self.safelyDismissAlertController()
         self.bgDownloadTableView?.reloadData()
@@ -206,9 +209,9 @@ extension MZDownloadManagerViewController: MZDownloadManagerDelegate {
 //        NSNotificationCenter.defaultCenter().postNotificationName(DownloadCompletedNotif as String, object: docDirectoryPath)
     }
     
-    func downloadRequestDidFailedWithError(error: NSError, downloadInfo: [String : AnyObject], index: Int) {
+    func downloadRequestDidFailedWithError(error: NSError, downloadModel: MZDownloadModel, index: Int) {
         self.safelyDismissAlertController()
-        self.refreshCellForIndex(downloadInfo, index: index)
+        self.refreshCellForIndex(downloadModel, index: index)
     }
 }
 
