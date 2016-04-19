@@ -36,10 +36,6 @@ class MZAvailableDownloadsViewController: UIViewController {
         let mzDownloadingNav : UINavigationController = tabBarTabs?.objectAtIndex(1) as! UINavigationController
         
         mzDownloadingViewObj = mzDownloadingNav.viewControllers[0] as? MZDownloadManagerViewController
-        mzDownloadingViewObj?.delegate = self
-
-        mzDownloadingViewObj?.sessionManager = mzDownloadingViewObj?.backgroundSession()
-        mzDownloadingViewObj?.populateOtherDownloadTasks()
     }
 }
 
@@ -70,28 +66,9 @@ extension MZAvailableDownloadsViewController: UITableViewDelegate {
         var fileName : NSString = fileURL.lastPathComponent
         fileName = MZUtility.getUniqueFileNameWithPath(fileDest.stringByAppendingPathComponent(fileName as String))
         
-        mzDownloadingViewObj?.addDownloadTask(fileName, fileURL: fileURL.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding)!)
+        mzDownloadingViewObj?.downloadManager.addDownloadTask(fileName, fileURL: fileURL.stringByAddingPercentEscapesUsingEncoding(NSUTF8StringEncoding)!)
         
         availableDownloadsArray.removeAtIndex(indexPath.row)
         tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Right)
-    }
-}
-
-extension MZAvailableDownloadsViewController: MZDownloadDelegate {
-    func downloadRequestStarted(downloadTask: NSURLSessionDownloadTask) {
-        
-    }
-    
-    func downloadRequestCanceled(downloadTask: NSURLSessionDownloadTask) {
-        
-    }
-    
-    func downloadRequestDidFailedWithError(error: NSError, downloadTask: NSURLSessionDownloadTask) {
-        debugPrint("Request failed: \(error)")
-    }
-    
-    func downloadRequestFinished(fileName: NSString) {
-        let docDirectoryPath : NSString = fileDest.stringByAppendingPathComponent(fileName as String)
-        NSNotificationCenter.defaultCenter().postNotificationName(DownloadCompletedNotif as String, object: docDirectoryPath)
     }
 }

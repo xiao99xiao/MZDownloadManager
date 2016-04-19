@@ -17,6 +17,8 @@
 		B3BA57C719F1695800258F7C /* MZDownloadManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BA57C619F1695800258F7C /* MZDownloadManagerTests.swift */; };
 		B3C1C1DB19F806F200F8DBC2 /* MZDownloadingCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C1C1DA19F806F200F8DBC2 /* MZDownloadingCell.swift */; };
 		B3C1C1DD19F810A900F8DBC2 /* MZUtility.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C1C1DC19F810A800F8DBC2 /* MZUtility.swift */; };
+		DA0C22911CC6097E00C4226F /* MZDownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA0C22901CC6097E00C4226F /* MZDownloadManager.swift */; };
+		DA0C22991CC662C000C4226F /* MZDownloadModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA0C22981CC662C000C4226F /* MZDownloadModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,6 +46,8 @@
 		B3BA57C619F1695800258F7C /* MZDownloadManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MZDownloadManagerTests.swift; sourceTree = "<group>"; };
 		B3C1C1DA19F806F200F8DBC2 /* MZDownloadingCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MZDownloadingCell.swift; sourceTree = "<group>"; };
 		B3C1C1DC19F810A800F8DBC2 /* MZUtility.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MZUtility.swift; sourceTree = "<group>"; };
+		DA0C22901CC6097E00C4226F /* MZDownloadManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MZDownloadManager.swift; sourceTree = "<group>"; };
+		DA0C22981CC662C000C4226F /* MZDownloadModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MZDownloadModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,8 +93,10 @@
 				B33FD6F819F7714E00DFFB82 /* MZDownloadManagerViewController.swift */,
 				B3C1C1DA19F806F200F8DBC2 /* MZDownloadingCell.swift */,
 				B3C1C1DC19F810A800F8DBC2 /* MZUtility.swift */,
+				DA0C22901CC6097E00C4226F /* MZDownloadManager.swift */,
 				B35B68CD19F8EFF00024C40C /* MZAvailableDownloadsViewController.swift */,
 				B35B68CF19F948B50024C40C /* MZDownloadedViewController.swift */,
+				DA0C22981CC662C000C4226F /* MZDownloadModel.swift */,
 				B3BA57B419F1695800258F7C /* Main.storyboard */,
 				B3BA57B719F1695800258F7C /* Images.xcassets */,
 				B3BA57B919F1695800258F7C /* LaunchScreen.xib */,
@@ -231,12 +237,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DA0C22991CC662C000C4226F /* MZDownloadModel.swift in Sources */,
 				B3BA57B119F1695800258F7C /* AppDelegate.swift in Sources */,
 				B3C1C1DD19F810A900F8DBC2 /* MZUtility.swift in Sources */,
 				B35B68D019F948B50024C40C /* MZDownloadedViewController.swift in Sources */,
 				B35B68CE19F8EFF00024C40C /* MZAvailableDownloadsViewController.swift in Sources */,
 				B33FD6F919F7714E00DFFB82 /* MZDownloadManagerViewController.swift in Sources */,
 				B3C1C1DB19F806F200F8DBC2 /* MZDownloadingCell.swift in Sources */,
+				DA0C22911CC6097E00C4226F /* MZDownloadManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

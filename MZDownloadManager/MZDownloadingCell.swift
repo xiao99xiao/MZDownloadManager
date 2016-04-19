@@ -32,7 +32,7 @@ class MZDownloadingCell: UITableViewCell {
         
         if let details = downloadInfoDict[kMZDownloadKeyDetails] as? String {
             self.lblDetails?.text = details
-            self.progressDownload?.progress = Float(downloadInfoDict[kMZDownloadKeyProgress] as! String) ?? 0.0
+            self.progressDownload?.progress = Float(downloadInfoDict[kMZDownloadKeyProgress] as! NSNumber) ?? 0.0
         }
     }
 }
