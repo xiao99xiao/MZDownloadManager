@@ -45,12 +45,19 @@ class MZDownloadManager: NSObject {
     var downloadingArray: [MZDownloadModel] = []
     var delegate: MZDownloadManagerDelegate?
     
+    var backgroundSessionCompletionHandler: (() -> Void)?
+    
     convenience init(session sessionIdentifer: String, delegate: MZDownloadManagerDelegate) {
         self.init()
         
         self.delegate = delegate
         self.sessionManager = self.backgroundSession(sessionIdentifer)
         self.populateOtherDownloadTasks()
+    }
+    
+    convenience init(session sessionIdentifer: String, delegate: MZDownloadManagerDelegate, completion: (() -> Void)?) {
+        self.init(session: sessionIdentifer, delegate: delegate)
+        self.backgroundSessionCompletionHandler = completion
     }
     
     private func backgroundSession(sessionIdentifer: String) -> NSURLSession {
@@ -334,15 +341,14 @@ extension MZDownloadManager: NSURLSessionDelegate {
     }
     
     func URLSessionDidFinishEventsForBackgroundURLSession(session: NSURLSession) {
-        let appDelegate : AppDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
         
-        if let _ = appDelegate.backgroundSessionCompletionHandler {
-            let completionHandler = appDelegate.backgroundSessionCompletionHandler
-            appDelegate.backgroundSessionCompletionHandler = nil
-            completionHandler!()
+        if let backgroundCompletion = self.backgroundSessionCompletionHandler {
+            dispatch_async(dispatch_get_main_queue(), {
+                backgroundCompletion()
+            })
         }
-        
         debugPrint("All tasks are finished")
+        
     }
 }
 

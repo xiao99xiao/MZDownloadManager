@@ -91,11 +91,11 @@
 			children = (
 				B3BA57B019F1695800258F7C /* AppDelegate.swift */,
 				B33FD6F819F7714E00DFFB82 /* MZDownloadManagerViewController.swift */,
+				B35B68CF19F948B50024C40C /* MZDownloadedViewController.swift */,
+				B35B68CD19F8EFF00024C40C /* MZAvailableDownloadsViewController.swift */,
 				B3C1C1DA19F806F200F8DBC2 /* MZDownloadingCell.swift */,
 				B3C1C1DC19F810A800F8DBC2 /* MZUtility.swift */,
 				DA0C22901CC6097E00C4226F /* MZDownloadManager.swift */,
-				B35B68CD19F8EFF00024C40C /* MZAvailableDownloadsViewController.swift */,
-				B35B68CF19F948B50024C40C /* MZDownloadedViewController.swift */,
 				DA0C22981CC662C000C4226F /* MZDownloadModel.swift */,
 				B3BA57B419F1695800258F7C /* Main.storyboard */,
 				B3BA57B719F1695800258F7C /* Images.xcassets */,

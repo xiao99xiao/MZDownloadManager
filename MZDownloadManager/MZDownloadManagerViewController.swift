@@ -19,7 +19,11 @@ class MZDownloadManagerViewController: UIViewController {
     lazy var downloadManager: MZDownloadManager = {
         [unowned self] in
         let sessionIdentifer: String = "com.iosDevelopment.MZDownloadManager.BackgroundSession"
-        let downloadmanager = MZDownloadManager(session: sessionIdentifer, delegate: self)
+        
+        let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
+        var completion = appDelegate.backgroundSessionCompletionHandler
+        
+        let downloadmanager = MZDownloadManager(session: sessionIdentifer, delegate: self, completion: completion)
         return downloadmanager
     }()
     
@@ -198,7 +202,6 @@ extension MZDownloadManagerViewController: MZDownloadManagerDelegate {
     func downloadRequestFinished(downloadModel: MZDownloadModel, index: Int) {
         
         self.safelyDismissAlertController()
-        self.bgDownloadTableView?.reloadData()
         
         downloadManager.presentNotificationForDownload("Ok", notifBody: "Download did completed")
         
