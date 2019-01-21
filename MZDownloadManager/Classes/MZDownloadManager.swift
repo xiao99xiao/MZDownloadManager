@@ -423,6 +423,7 @@ extension MZDownloadManager {
         let downloadTask = downloadModel.task
         downloadTask!.resume()
         downloadModel.status = TaskStatus.downloading.description()
+        downloadModel.startTime = Date()
         
         downloadingArray[index] = downloadModel
         
