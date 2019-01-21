@@ -378,20 +378,20 @@ extension MZDownloadManager {
         }
     }
     
-    @objc public func addDownloadTask(_ fileName: String, fileURL: String, destinationPath: String) {
+    @objc public func addDownloadTask(_ fileName: String, fileURL: String, destinationPath: String, startImmediately: Bool = true) {
         
         let url = URL(string: fileURL)!
         let request = URLRequest(url: url)
-        addDownloadTask(fileName, request: request, destinationPath: destinationPath)
+        addDownloadTask(fileName, request: request, destinationPath: destinationPath, startImmediately: startImmediately)
         
     }
     
-    @objc public func addDownloadTask(_ fileName: String, fileURL: String) {
-        addDownloadTask(fileName, fileURL: fileURL, destinationPath: "")
+    @objc public func addDownloadTask(_ fileName: String, fileURL: String, startImmediately: Bool = true) {
+        addDownloadTask(fileName, fileURL: fileURL, destinationPath: "", startImmediately: startImmediately)
     }
     
-    @objc public func addDownloadTask(_ fileName: String, request: URLRequest) {
-        addDownloadTask(fileName, request: request, destinationPath: "")
+    @objc public func addDownloadTask(_ fileName: String, request: URLRequest, startImmediately: Bool = true) {
+        addDownloadTask(fileName, request: request, destinationPath: "", startImmediately: startImmediately)
     }
     
     @objc public func pauseDownloadTaskAtIndex(_ index: Int) {
