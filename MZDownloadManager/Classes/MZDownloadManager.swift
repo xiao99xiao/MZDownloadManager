@@ -350,24 +350,32 @@ extension MZDownloadManager: URLSessionDownloadDelegate {
 
 extension MZDownloadManager {
     
-    @objc public func addDownloadTask(_ fileName: String, request: URLRequest, destinationPath: String) {
+    @objc public func addDownloadTask(_ fileName: String, request: URLRequest, destinationPath: String, startImmediately: Bool = true) {
         
         let url = request.url!
         let fileURL = url.absoluteString
         
         let downloadTask = sessionManager.downloadTask(with: request)
         downloadTask.taskDescription = [fileName, fileURL, destinationPath].joined(separator: ",")
-        downloadTask.resume()
+        if startImmediately {
+            downloadTask.resume()
+        }
         
         debugPrint("session manager:\(String(describing: sessionManager)) url:\(String(describing: url)) request:\(String(describing: request))")
         
         let downloadModel = MZDownloadModel.init(fileName: fileName, fileURL: fileURL, destinationPath: destinationPath)
-        downloadModel.startTime = Date()
-        downloadModel.status = TaskStatus.downloading.description()
+        if startImmediately {
+            downloadModel.startTime = Date()
+            downloadModel.status = TaskStatus.downloading.description()
+        } else {
+            downloadModel.status = TaskStatus.gettingInfo.description()
+        }
         downloadModel.task = downloadTask
         
         downloadingArray.append(downloadModel)
-        delegate?.downloadRequestStarted?(downloadModel, index: downloadingArray.count - 1)
+        if startImmediately {
+            delegate?.downloadRequestStarted?(downloadModel, index: downloadingArray.count - 1)
+        }
     }
     
     @objc public func addDownloadTask(_ fileName: String, fileURL: String, destinationPath: String) {
